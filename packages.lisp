@@ -1,5 +1,5 @@
 (defpackage :x264
-  (:use :cl))
+  (:use :cl :sb-alien))
 
 (defpackage :coder
   (:use :cl)
