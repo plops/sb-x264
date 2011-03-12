@@ -5,6 +5,8 @@
 	   (and (symbolp type)
 		(case type
 		  ('int 'integer)
+		  ('uint8_t 'uint8_t)
+		  ('uint32_t 'uint32_t)
 		  ('float 'sb-alien:single-float))))
 	 (parse-declaration (type lisp-name)
 	   (let ((lisp-type (short->lisp-type type))
@@ -13,6 +15,12 @@
 		 (c-name (string-downcase
 			  (symbol-name lisp-name))))
 	     (when lisp-type
+	       (when (find #\[ c-name) 
+		 ;; change type to (array int) and remove [4] from name
+		 (setf lisp-type `(array ,lisp-type)
+		       c-name (subseq c-name
+				      0 (position #\[ c-name))
+		       lisp-name (intern c-name)))
 	       `(,lisp-type ,lisp-name ,c-type ,c-name))))
 	 (structf (name &rest rest)
 	   `(:structure 
@@ -53,12 +61,13 @@
 	     (struct (&rest rest)
 	       `(structf ,@(mapcar (lambda (x) `(quote ,x)) rest))))
     ;; unfortunately not every letter is uppercase
-    `(;,@
-#+nil(integer X264_BUILD X264_CPU_CACHELINE_32 X264_CPU_CACHELINE_64 X264_CPU_ALTIVEC X264_CPU_MMX X264_CPU_MMXEXT X264_CPU_SSE X264_CPU_SSE2 X264_CPU_SSE2_IS_SLOW X264_CPU_SSE2_IS_FAST X264_CPU_SSE3 X264_CPU_SSSE3 X264_CPU_SHUFFLE_IS_FAST X264_CPU_STACK_MOD4 X264_CPU_SSE4 X264_CPU_SSE42 X264_CPU_SSE_MISALIGN X264_CPU_LZCNT X264_CPU_ARMV6 X264_CPU_NEON X264_CPU_FAST_NEON_MRC X264_CPU_SLOW_CTZ X264_CPU_SLOW_ATOM X264_CPU_AVX 
+    `(,@(integer X264_BUILD X264_CPU_CACHELINE_32 X264_CPU_CACHELINE_64 X264_CPU_ALTIVEC X264_CPU_MMX X264_CPU_MMXEXT X264_CPU_SSE X264_CPU_SSE2 X264_CPU_SSE2_IS_SLOW X264_CPU_SSE2_IS_FAST X264_CPU_SSE3 X264_CPU_SSSE3 X264_CPU_SHUFFLE_IS_FAST X264_CPU_STACK_MOD4 X264_CPU_SSE4 X264_CPU_SSE42 X264_CPU_SSE_MISALIGN X264_CPU_LZCNT X264_CPU_ARMV6 X264_CPU_NEON X264_CPU_FAST_NEON_MRC X264_CPU_SLOW_CTZ X264_CPU_SLOW_ATOM X264_CPU_AVX 
 					;X264_ANALYSE_I4x4 X264_ANALYSE_I8x8 X264_ANALYSE_PSUB16x16 X264_ANALYSE_PSUB8x8 X264_ANALYSE_BSUB16x16 
 		 X264_DIRECT_PRED_NONE  X264_DIRECT_PRED_SPATIAL X264_DIRECT_PRED_TEMPORAL X264_DIRECT_PRED_AUTO X264_ME_DIA X264_ME_HEX X264_ME_UMH X264_ME_ESA X264_ME_TESA X264_CQM_FLAT X264_CQM_JVT X264_CQM_CUSTOM X264_RC_CQP X264_RC_CRF X264_RC_ABR X264_QP_AUTO X264_AQ_NONE X264_AQ_VARIANCE X264_AQ_AUTOVARIANCE X264_B_ADAPT_NONE X264_B_ADAPT_FAST X264_B_ADAPT_TRELLIS X264_WEIGHTP_NONE  X264_WEIGHTP_SIMPLE X264_WEIGHTP_SMART X264_B_PYRAMID_NONE X264_B_PYRAMID_STRICT X264_B_PYRAMID_NORMAL X264_KEYINT_MIN_AUTO X264_KEYINT_MAX_INFINITE X264_OPEN_GOP_NONE X264_OPEN_GOP_NORMAL X264_OPEN_GOP_BLURAY X264_CSP_MASK  X264_CSP_NONE X264_CSP_I420 X264_CSP_YV12 X264_CSP_NV12 X264_CSP_MAX X264_CSP_VFLIP X264_CSP_HIGH_DEPTH X264_TYPE_AUTO X264_TYPE_IDR X264_TYPE_I X264_TYPE_P X264_TYPE_BREF X264_TYPE_B X264_TYPE_KEYFRAME X264_LOG_NONE X264_LOG_ERROR X264_LOG_WARNING X264_LOG_INFO X264_LOG_DEBUG X264_THREADS_AUTO X264_SYNC_LOOKAHEAD_AUTO X264_NAL_HRD_NONE X264_NAL_HRD_VBR X264_NAL_HRD_CBR X264_PARAM_BAD_NAME X264_PARAM_BAD_VALUE)
-
-	#+nil,(enum nal_unit_type_e
+	(:type uint32_t "uint32_t")
+	(:type uint8_t "uint8_t")
+	
+	,(enum nal_unit_type_e
 		    NAL_UNKNOWN   
 		    NAL_SLICE     
 		    NAL_SLICE_DPA 
@@ -71,13 +80,13 @@
 		    NAL_AUD       
 		    NAL_FILLER)
 	
-	#+nil,(enum nal_priority_e
+	,(enum nal_priority_e
 		    NAL_PRIORITY_DISPOSABLE
 		    NAL_PRIORITY_LOW       
 		    NAL_PRIORITY_HIGH     
 		    NAL_PRIORITY_HIGHEST)
 
-	#+nil,(struct x264_nal_t
+	,(struct x264_nal_t
 		 (int i_ref_idc)
 		 (int i_type)
 		 (int b_long_startcode)
@@ -85,7 +94,7 @@
 		 (int i_last_mb)
 		 (int i_payload)
 		 (uint8_t* p_payload))
-	#+nil,(struct x264_zone_t
+	,(struct x264_zone_t
 		      (int i_start) 
 		      (int i_end)
 		      (int b_force_qp)
@@ -134,12 +143,12 @@
 		      (int b_constrained_intra)
 		      (int i_cqm_preset)
 		      (char* psz_cqm_file)      
-		      ;; (uint8_t cqm_4iy[16])        
-		      ;; (uint8_t cqm_4ic[16])
-		      ;; (uint8_t cqm_4py[16])
-		      ;; (uint8_t cqm_4pc[16])
-		      ;; (uint8_t cqm_8iy[64])
-		      ;; (uint8_t cqm_8py[64])
+		      (uint8_t cqm_4iy[16])        
+		      (uint8_t cqm_4ic[16])
+		      (uint8_t cqm_4py[16])
+		      (uint8_t cqm_4pc[16])
+		      (uint8_t cqm_8iy[64])
+		      (uint8_t cqm_8py[64])
 		      (void* p_log_private)
 		      (int i_log_level)
 		      (int b_visualize)
