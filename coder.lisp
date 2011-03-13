@@ -121,22 +121,6 @@ Y-image followed by a (W/2)x(H/2) U-image and V-image."
        (progn 
 	 (free-alien ,pic)))))
 
-#+nil
-(defparameter *pic*
- (multiple-value-list
-  (x264_picture_alloc x264::X264_CSP_I420
-		      320 240)))
-
-#+nil
-(sb-alien:deref
- (slot (slot (second *pic*) 'x264::img) 'x264::plane)
- 0)
-
-#+nil
-(with-picture (pic 320 240)
-  (type-of (deref (slot (slot pic 'x264::img) 'x264::plane) 0)
-	   ))
-
 (define-alien-routine x264_encoder_encode
     int
   (handle (* int))
@@ -144,20 +128,6 @@ Y-image followed by a (W/2)x(H/2) U-image and V-image."
   (pi_nal int :out)
   (pic-in (* x264::x264_picture_t))
   (pic-out (* x264::x264_picture_t)))
-
-(defun make-test-img (w h)
-  (let ((yuyv (make-array (list h w 2) :element-type '(unsigned-byte 8))))
-    (dotimes (i w)
-      (dotimes (j h)
-	(setf (aref yuyv j i 0) (mod i 255) ;; gray
-	      (aref yuyv j i 1) (if (= 0 (mod i 2))
-				    0 ;; u
-				    j ;; v
-				    ))))
-    yuyv))
-
-#+nil
-(defparameter *e* (init))
 
 (defun fo ()
   (let ((w 320) (h 240))
@@ -181,23 +151,3 @@ Y-image followed by a (W/2)x(H/2) U-image and V-image."
 
 
 (time (fo))
-
-
-#+nil
-(defun blub ()
- (let* ((w 320) (h 240)
-	(m (make-test-img w h))
-	(m1 (sb-ext:array-storage-vector m))
-	(buf (make-array (* w h 2) :element-type '(unsigned-byte 8))))
-   (with-picture (pic-out w h)
-     (with-picture (pic w h)
-       (setf (sb-alien:deref (slot (slot pic 'x264::img) 'x264::plane) 0)
-	     (sb-sys:vector-sap m1))
-       (sb-alien:with-alien ((pp-nal (* x264::x264_nal_t)))
-	 (defparameter *o* 
-	     (multiple-value-list (x264_encoder_encode *e* (sb-sys:vector-sap buf)
-						       (sb-alien:addr pic) 
-						       (sb-alien:addr pic-out)))))))))
-
-#+nil
-(blub)
